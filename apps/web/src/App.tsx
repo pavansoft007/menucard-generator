@@ -30,6 +30,7 @@ const UsersPage = lazy(() => import('./features/users/UsersPage'));
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
 const EditorPage = lazy(() => import('./editor/EditorPage'));
 const RenderPage = lazy(() => import('./features/render/RenderPage'));
+const RenderTemplatePage = lazy(() => import('./features/render/RenderTemplatePage'));
 
 // Any successful save tells the other open tabs (e.g. the live preview) to refetch.
 const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('gc-menu');
@@ -68,6 +69,7 @@ export default function App() {
           <Suspense fallback={<Loading />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/render/template/:templateId" element={<RenderTemplatePage />} />
               <Route path="/render/:pageId" element={<RenderPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="editor/:pageId" element={<EditorPage />} />

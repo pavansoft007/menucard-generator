@@ -30,6 +30,7 @@ and is edited from the admin dashboard.
 | **Design system** | Themes (colours, fonts, borders, shadows, header/footer styles – default *Golden Crunch* black & gold), backgrounds (colour / gradient / image, overlays, borders), combos with computed savings. |
 | **Pages & sections** | Unlimited pages (A4 portrait/landscape or custom), sections per page, 6 reusable card templates (premium, image-left, image-top, compact list, featured, combo), move/duplicate/reorder, drafts, publishing and **version history with restore**. |
 | **Visual editor** | Live A4 canvas: drag, resize, rotate, snapping guides, inline text editing, layers, align, undo/redo, zoom, **autosave** + local draft recovery, print checks (cropped / overlapping / binding-zone / overflowing content). |
+| **Design templates** | 24 ready-made page designs (6 families × 4 colourways: *Neon Feast*, *Royal Classic*, *Street Pop*, *Rustic Kraft*, *Modern Minimal*, *Glass Gradient*) with glowing/ornate frames, icon header bands, ribbon/pill/stamp headings, photo-first card styles and glossy price pills. Previewed live on your own menu; applied in one transaction with an automatic backup version. |
 | **Preview** | Single page, front-&-back sheets, all pages; follows edits made in other tabs. |
 | **Export** | Multi-page PDF, one-PDF-per-page zip, PNG (72–600 DPI), page ranges, fronts/backs only, other paper sizes, bleed + trim box, pad-to-even for duplex, original-quality images. |
 | **Admin** | Users with roles (administrator / editor), password policy, immediate session revocation, export defaults, system status. |
@@ -74,6 +75,8 @@ Sign in at **http://localhost:5180** with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from 
 The seed adds your sample menu (7 categories, 27 items with sizes/prices), a default theme, two backgrounds and a
 5-page structure. It contains **no images and no invented prices** (Water Bottle's price is intentionally unset).
 Everything is editable and deletable. Re-running the seed never overwrites your data.
+
+**Designs and photos:** the templates are built around food photography. Empty photo slots show artwork in previews, and print nothing in exports, so a section without photos automatically gets a clean text-list style. Upload photos, then re-apply the design (*Item cards → Automatic*) to switch those sections to photo cards.
 
 > Ports: web **5180**, API **4000**, MySQL **3307** (chosen to avoid clashing with other local projects).
 
@@ -121,7 +124,7 @@ API production commands (inside `apps/api`): `npm run migrate:prod`, `npm run se
 3. **Image Library** – upload food photos (originals are always kept; use *Crop & resize* for a tidy copy).
 4. **Menu Categories → Menu Items** – add categories and items; give each item its own image and as many
    size/price options as you need.
-5. **Theme & Design / Backgrounds / Combos** – adjust the look; build combo offers.
+5. **Menu Templates** – pick one of 24 complete designs (preview it on your own menu, then *Apply*; a backup version is saved first). **Theme & Design / Backgrounds / Combos** – fine-tune the look; build combo offers.
 6. **Page Builder** – create pages (cover, content, back), reorder by dragging, open one with **Design**.
 7. **Visual editor** – drag content onto the page, tune it, check the *Checks* list (right panel, no page selected).
 8. **Menu Preview** – flip through the whole book (*Front & back* shows duplex sheets).
@@ -159,6 +162,7 @@ and need `Authorization: Bearer <token>` except `POST /auth/login` and `GET /hea
 | Menu items | `GET/POST /menu-items` (paging, search, filters) · `GET/PUT/DELETE /menu-items/:id` · `PATCH /menu-items/reorder` |
 | Media | `POST /media/upload` · `POST /media/bulk-upload` · `GET /media` · `GET /media/by-ids` · `PUT/DELETE /media/:id` · `POST /media/:id/replace` · `POST /media/:id/crop` · `GET /media/:id/usage` |
 | Themes / Backgrounds / Combos | `GET/POST` + `PUT/DELETE /:id` on `/themes`, `/backgrounds`, `/combos` (`POST /themes/:id/default`) |
+| Design templates | `POST /design/apply` (restyle pages + sections atomically, with optional backup) |
 | Pages | `GET/POST /menu-pages` · `GET/PUT/DELETE /menu-pages/:id` · `POST /:id/duplicate` · `PATCH /reorder` |
 | Sections | `GET/POST /menu-sections` · `GET/PUT/DELETE /:id` · `POST /:id/duplicate` · `PATCH /reorder` |
 | Versions | `GET/POST /menu-versions` · `POST /menu-versions/:id/restore` |
@@ -171,7 +175,7 @@ Uploaded images are served from `/uploads/*`. Exports are **not** public; they n
 ## Testing
 
 ```bash
-npm test                      # 76 API tests + 26 web unit tests
+npm test                      # 131 API tests + 36 web unit tests
 npm run typecheck && npm run lint
 ```
 
@@ -181,6 +185,8 @@ npm run typecheck && npm run lint
   pixel-level crop checks), deletion guards, layouts/versions, export options and the read-only render token.
 * **Web unit tests** cover the editor's pure logic: snapping/resizing, undo/redo history, print-issue detection, token
   substitution, layout generation and crop geometry.
+* **Template tests** check that all 24 designs validate against the schemas, that every colourway keeps text readable (WCAG contrast for body text, headings, price pills, ribbons), and that applying is atomic, idempotent and backed up.
+* **Template review** (`npx tsx scripts/template-sheets.mjs --out ./template-review`) renders every design on your menu to PNGs and per-family contact sheets for visual review.
 * **Smoke test** (`npm run smoke`) verifies a deployed install, optionally rendering a real PDF and checking it is A4.
 
 ## Security

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Autocomplete, Box, Button, Card, CardActions, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { defaultThemeConfig, themeInputSchema, type ThemeConfig, type ThemeDTO, type ThemeInput } from '@gc/shared-types';
+import { defaultThemeConfig, headingStyleKinds, themeInputSchema, type ThemeConfig, type ThemeDTO, type ThemeInput } from '@gc/shared-types';
 import { keys, themeService } from '../../services/menuService';
 import { useUiStore } from '../../store/uiStore';
 import { ConfirmDialog, ErrorAlert, ListSkeleton, PageHeader } from '../../components/common';
@@ -12,7 +12,8 @@ import EmptyState from '../../components/EmptyState';
 import { ColorField, NumberField, SelectField } from '../../components/fields';
 import { shadowCss } from '../../renderer/styles';
 
-const FONTS = ['Playfair Display', 'Poppins', 'Oswald', 'Bebas Neue', 'Montserrat', 'Inter', 'Cinzel', 'Lora', 'Roboto', 'Lobster'];
+import { BUNDLED_FONTS } from '../../renderer/fonts';
+const FONTS: string[] = [...BUNDLED_FONTS];
 const SHADOWS = ['none', 'soft', 'strong', 'gold-glow'] as const;
 
 export function ThemePreview({ config: c, height = 150 }: { config: ThemeConfig; height?: number }) {
@@ -95,7 +96,7 @@ function ThemeDialog({ theme, onClose }: { theme: ThemeDTO | null; onClose: () =
               <ColorField control={control} name="config.border.color" label="Border colour" />
               <NumberField control={control} name="config.borderRadiusMm" label="Corner radius (mm)" min={0} max={30} step={0.5} />
               <SelectField control={control} name="config.shadow" label="Shadow" options={SHADOWS} />
-              <SelectField control={control} name="config.headerStyle" label="Header style" options={['brush-red', 'gold-bar', 'ribbon', 'plain']} />
+              <SelectField control={control} name="config.headerStyle" label="Header style" options={headingStyleKinds} />
               <SelectField control={control} name="config.footerStyle" label="Footer style" options={['gold-line', 'bar', 'plain']} />
             </div>
             <Typography variant="caption" color="text.secondary">Fonts are embedded into exported PDFs in the export phase; pick any installed or web font name.</Typography>

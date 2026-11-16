@@ -23,6 +23,7 @@ import { versionsRouter } from './modules/versions/versions.module.js';
 import { exportRouter } from './modules/export/export.routes.js';
 import { usersRouter } from './modules/users/users.module.js';
 import { settingsRouter } from './modules/settings/settings.module.js';
+import { designRouter } from './modules/design/design.module.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 
 export function createApp() {
@@ -78,6 +79,7 @@ export function createApp() {
   app.use('/api/export', exportRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/settings', settingsRouter);
+  app.use('/api/design', designRouter);
 
   // Production: serve the built web app from the API so one process (and one URL) does everything,
   // including the /render route the PDF exporter opens.

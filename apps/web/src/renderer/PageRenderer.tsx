@@ -1,13 +1,14 @@
-import { memo, useCallback, type CSSProperties } from 'react';
-import type { ImageElement, ItemCardElement, LayoutElement, LogoElement, PageLayout, PageSettings, ShapeElement, TextElement } from '@gc/shared-types';
+import { memo, useCallback, useLayoutEffect, useRef, type CSSProperties } from 'react';
+import type { IconElement, ImageElement, ItemCardElement, LayoutElement, LogoElement, OrnamentElement, PageLayout, PageSettings, ShapeElement, TextElement } from '@gc/shared-types';
 import { resolvePageSize } from '@gc/shared-types';
 import { ItemCard, type CardOptions, type RenderMode } from './cards';
 import { themeFor, type MenuData } from './menuData';
 import { SectionView } from './SectionView';
-import { backgroundStyle } from './styles';
-import { contactLine, fillTokens, resolveColor, tokenValues } from './tokens';
+import { backgroundStyle, hexA, isDark } from './styles';
+import { MM_PX, contactLine, fillTokens, resolveColor, tokenValues } from './tokens';
 import { bindingSide, safeArea } from './geometry';
 import { generateLayout } from './generate';
+import { CornerFlourish, LineIcon, Ornament } from './icons';
 
 export interface RenderablePage {
   id?: number;
@@ -65,6 +66,60 @@ function ItemCardView({ el, data, theme, mode }: { el: ItemCardElement; data: Me
   return <div style={{ width: '100%', height: '100%' }}><ItemCard item={item} template={el.template} o={o} /></div>;
 }
 
+function IconView({ el, theme }: { el: IconElement; theme: ReturnType<typeof themeFor> }) {
+  return <LineIcon name={el.icon} color={resolveColor(el.color, theme) ?? '#fff'} strokeMm={el.strokeMm} sizeMm={Math.min(el.w, el.h)} />;
+}
+function OrnamentView({ el, theme }: { el: OrnamentElement; theme: ReturnType<typeof themeFor> }) {
+  return <Ornament kind={el.kind} color={resolveColor(el.color, theme) ?? '#fff'} strokeMm={el.strokeMm} widthMm={el.w} />;
+}
+
+const ICON_MM = 11;
+
+/** Brand band at the top of a page: line icons flanking the logo plus a (usually script) title, as in classic fast-food menus. */
+function HeaderBand({ s, theme, values, logo, width }: { s: PageSettings; theme: ReturnType<typeof themeFor>; values: Record<string, string>; logo?: { url: string; label: string }; width: number }) {
+  const h = s.header;
+  const c = theme.colors;
+  const icons = h.icons ?? [];
+  const half = Math.ceil(icons.length / 2);
+  const title = h.title ? fillTokens(h.title, values) : '';
+  const family = h.titleFont === 'heading' ? theme.fonts.heading : (theme.fonts.display ?? theme.fonts.heading);
+  const iconEls = (names: typeof icons) => names.map((n, i) => <div key={`${n}${i}`} style={{ width: `${ICON_MM}mm`, height: `${ICON_MM}mm`, flex: 'none' }}><LineIcon name={n} color={c.text} strokeMm={0.42} sizeMm={ICON_MM} /></div>);
+  const brand = logo ? (
+    <img src={logo.url} alt={logo.label} draggable={false} style={{ width: `${s.logo.widthMm}mm`, maxHeight: '40mm', objectFit: 'contain', display: 'block' }} />
+  ) : (
+    <div style={{ fontFamily: font(theme.fonts.heading), fontWeight: 700, fontSize: '17pt', color: c.heading, textAlign: 'center', letterSpacing: '1pt', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{values['restaurant.name']}</div>
+  );
+  const titleEl = title ? <span style={{ fontFamily: font(family), fontStyle: 'italic', fontWeight: 700, fontSize: '27pt', lineHeight: 1, color: isDark(c.background) ? '#FFFFFF' : c.heading, textShadow: isDark(c.background) ? `0 0 2mm ${hexA(c.accent, 0.6)}, 0 0.4mm 0.8mm rgba(0,0,0,.6)` : 'none', whiteSpace: 'nowrap' }}>{title}</span> : null;
+  const ornament = h.ornament ? <div style={{ width: '58%', height: '4mm', margin: '1.5mm auto 0' }}><Ornament kind={h.ornament} color={c.accent} strokeMm={0.3} widthMm={width * 0.58} /></div> : null;
+
+  if (h.layout === 'stacked') {
+    return (
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5mm' }}>
+        {brand}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4mm' }}>
+          {iconEls(icons.slice(0, half))}
+          {titleEl}
+          {iconEls(icons.slice(half))}
+        </div>
+        {ornament}
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '4mm' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3.5mm', justifyContent: 'flex-start' }}>{iconEls(icons.slice(0, half))}</div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>{brand}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3.5mm', justifyContent: 'flex-end' }}>
+          {iconEls(icons.slice(half))}
+          {titleEl}
+        </div>
+      </div>
+      {ornament}
+    </div>
+  );
+}
+
 interface ElementProps {
   el: LayoutElement;
   data: MenuData;
@@ -85,6 +140,8 @@ const ElementView = memo(function ElementView({ el, data, theme, mode, values, o
     case 'shape': body = <ShapeView el={el} theme={theme} />; break;
     case 'logo': body = <LogoView el={el} data={data} mode={mode} />; break;
     case 'itemCard': body = <ItemCardView el={el} data={data} theme={theme} mode={mode} />; break;
+    case 'icon': body = <IconView el={el} theme={theme} />; break;
+    case 'ornament': body = <OrnamentView el={el} theme={theme} />; break;
     case 'section': {
       const section = data.sections.find((s) => s.id === el.sectionId);
       body = section ? <SectionView section={section} data={data} theme={theme} mode={mode} onMeasure={onMeasure ? measure : undefined} /> : <Placeholder text="Section was deleted" mode={mode} />;
@@ -110,13 +167,16 @@ export interface PageRendererProps {
   /** Edit mode only: margin / binding-zone guides. */
   showGuides?: boolean;
   onMeasureElement?: (elementId: string, heightMm: number) => void;
+  /** Height (mm) of the automatic flow layout, so callers can tell when content does not fit the page. */
+  onMeasureFlow?: (heightMm: number) => void;
 }
 
 /**
  * Draws one page at its real physical size (CSS millimetres). The editor, live preview and PDF export
  * all use this component, so what you design is exactly what prints.
  */
-export function PageRenderer({ page, pageNumber, totalPages, data, mode, showGuides, onMeasureElement }: PageRendererProps) {
+export function PageRenderer({ page, pageNumber, totalPages, data, mode, showGuides, onMeasureElement, onMeasureFlow }: PageRendererProps) {
+  const flowRef = useRef<HTMLDivElement>(null);
   const s = page.settings;
   const theme = themeFor(data, page.themeId);
   const { widthMm, heightMm } = resolvePageSize(s);
@@ -133,23 +193,79 @@ export function PageRenderer({ page, pageNumber, totalPages, data, mode, showGui
   const footerLines = [footerText, contact, !s.footer.text && !s.footer.useRestaurantInfo ? values['restaurant.footerText'] : ''].filter(Boolean);
   const headerText = s.header.enabled && s.header.text ? fillTokens(s.header.text, values) : '';
   const justify = ({ left: 'flex-start', center: 'center', right: 'flex-end' } as const)[s.logo.position];
-  const elements = effectiveElements(page, data, pageNumber, mode);
+  // A content page nobody has arranged yet is laid out as a natural top-to-bottom flow, so section heights are always exact
+  // (no estimates). Covers/back covers and hand-arranged pages use positioned elements.
+  const autoPage = mode !== 'edit' && page.layout.elements.length === 0 && !page.layout.blank && page.id !== undefined;
+  const flow = autoPage && page.pageType === 'content';
+  const flowSections = flow ? data.sections.filter((x) => x.pageId === page.id).sort((a, b) => a.displayOrder - b.displayOrder) : [];
+  const elements = flow ? [] : effectiveElements(page, data, pageNumber, mode);
   const sorted = [...elements].sort((a, b) => a.z - b.z);
+
+  useLayoutEffect(() => {
+    const el = flowRef.current;
+    if (!el || !onMeasureFlow) return;
+    const report = () => onMeasureFlow(Math.round((el.offsetHeight / MM_PX) * 10) / 10);
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
 
   return (
     <div className="gc-page" data-page-type={page.pageType} style={{ position: 'relative', width: `${widthMm}mm`, height: `${heightMm}mm`, overflow: 'hidden', boxSizing: 'border-box', backgroundColor: s.backgroundColor ?? bg?.config.color ?? theme.colors.background, color: theme.colors.text, fontFamily: font(theme.fonts.body), ...bgStyle }}>
-      {s.border.enabled && <div style={{ position: 'absolute', inset: `${frameInset}mm`, border: `${s.border.widthMm}mm ${s.border.style} ${s.border.color}`, borderRadius: `${s.border.radiusMm}mm`, pointerEvents: 'none' }} />}
-
-      {(logo || headerText) && (
-        <div style={{ position: 'absolute', top: `${area.top}mm`, left: `${area.left}mm`, width: `${area.width}mm`, display: 'flex', flexDirection: 'column', alignItems: justify, gap: '2mm', pointerEvents: 'none' }}>
-          {logo && <img src={logo.media.url} alt={logo.label} draggable={false} style={{ width: `${s.logo.widthMm}mm`, maxHeight: '45mm', objectFit: 'contain', display: 'block' }} />}
-          {headerText && <div style={{ width: '100%', textAlign: s.logo.position, fontFamily: font(theme.fonts.heading), fontSize: '9pt', fontWeight: 700, color: theme.colors.heading }}>{headerText}</div>}
+      {s.border.enabled && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: `${frameInset}mm`,
+            border: `${s.border.widthMm}mm ${s.border.style === 'glow' || s.border.style === 'ornate' ? 'solid' : s.border.style} ${s.border.color}`,
+            borderRadius: `${s.border.radiusMm}mm`,
+            pointerEvents: 'none',
+            ...(s.border.style === 'glow' ? { boxShadow: `0 0 1.6mm ${s.border.color}, 0 0 5.5mm ${s.border.color}aa, inset 0 0 2.2mm ${s.border.color}66` } : {}),
+            ...(s.border.style === 'ornate' ? { outline: `0.25mm solid ${s.border.color}`, outlineOffset: '-1.7mm' } : {}),
+          }}
+        >
+          {s.border.style === 'ornate' &&
+            ([[0, 'top', 'left'], [90, 'top', 'right'], [270, 'bottom', 'left'], [180, 'bottom', 'right']] as const).map(([rot, v, hz]) => (
+              <div key={rot} style={{ position: 'absolute', [v]: '-0.6mm', [hz]: '-0.6mm', width: '15mm', height: '15mm', transform: `rotate(${rot}deg)` }}>
+                <CornerFlourish color={s.border.color} strokeMm={0.38} sizeMm={15} />
+              </div>
+            ))}
         </div>
       )}
 
-      {sorted.map((el) => (
-        <ElementView key={el.id} el={el} data={data} theme={theme} mode={mode} values={values} onMeasure={onMeasureElement} />
-      ))}
+      {(() => {
+        const bandNode =
+          s.header.enabled && ((s.header.icons?.length ?? 0) > 0 || !!s.header.title) ? (
+            <HeaderBand s={s} theme={theme} values={values} logo={logo ? { url: logo.media.url, label: logo.label } : undefined} width={area.width} />
+          ) : logo || headerText ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: justify, gap: '2mm' }}>
+              {logo && <img src={logo.media.url} alt={logo.label} draggable={false} style={{ width: `${s.logo.widthMm}mm`, maxHeight: '45mm', objectFit: 'contain', display: 'block' }} />}
+              {headerText && <div style={{ width: '100%', textAlign: s.logo.position, fontFamily: font(theme.fonts.heading), fontSize: '9pt', fontWeight: 700, color: theme.colors.heading }}>{headerText}</div>}
+            </div>
+          ) : null;
+        const box: CSSProperties = { position: 'absolute', top: `${area.top}mm`, left: `${area.left}mm`, width: `${area.width}mm`, pointerEvents: 'none' };
+        if (flow) {
+          return (
+            <div ref={flowRef} style={{ ...box, display: 'flex', flexDirection: 'column', gap: '4mm' }}>
+              {bandNode}
+              {flowSections.map((sec) => (
+                <div key={sec.id} style={{ width: `${sec.config.widthPct}%`, alignSelf: 'center' }}>
+                  <SectionView section={sec} data={data} theme={theme} mode={mode} />
+                </div>
+              ))}
+            </div>
+          );
+        }
+        return (
+          <>
+            {bandNode && <div style={box}>{bandNode}</div>}
+            {sorted.map((el) => (
+              <ElementView key={el.id} el={el} data={data} theme={theme} mode={mode} values={values} onMeasure={onMeasureElement} />
+            ))}
+          </>
+        );
+      })()}
 
       {s.footer.enabled && footerLines.length > 0 && (
         <div style={{ position: 'absolute', left: `${area.left}mm`, width: `${area.width}mm`, bottom: `${area.bottom}mm`, textAlign: 'center', fontFamily: font(theme.fonts.body), fontSize: '5.6pt', lineHeight: 1.5, pointerEvents: 'none', zIndex: 9000, ...(theme.footerStyle === 'bar' ? { background: theme.colors.accent, color: theme.colors.priceBadgeText, padding: '1.2mm 3mm', borderRadius: '1mm' } : theme.footerStyle === 'gold-line' ? { borderTop: `0.35mm solid ${theme.colors.accent}`, paddingTop: '1.5mm', color: theme.colors.text } : { color: theme.colors.text }) }}>

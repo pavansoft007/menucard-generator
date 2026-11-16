@@ -7,12 +7,10 @@ import { cardTemplates, defaultSectionConfig, sectionInputSchema, type CategoryD
 import { backgroundService, keys, sectionService } from '../../services/menuService';
 import { useUiStore } from '../../store/uiStore';
 import { ImageField } from '../../components/ImageField';
+import { CARD_TEMPLATE_LABELS } from '../../renderer/cards';
 import { ColorField, NumberField, SelectField, SwitchField } from '../../components/fields';
 
-const TEMPLATE_LABELS: Record<(typeof cardTemplates)[number], string> = {
-  premium: 'Premium food card', 'image-left': 'Image left / details right', 'image-top': 'Image top / details bottom',
-  'compact-list': 'Compact list', featured: 'Featured item', combo: 'Combo card',
-};
+const TEMPLATE_LABELS = CARD_TEMPLATE_LABELS;
 
 export default function SectionDialog({ section, defaultPageId, pages, categories, items, combos, onClose }: { section: SectionDTO | null; defaultPageId: number | null; pages: PageDTO[]; categories: CategoryDTO[]; items: ItemDTO[]; combos: ComboDTO[]; onClose: () => void }) {
   const qc = useQueryClient();

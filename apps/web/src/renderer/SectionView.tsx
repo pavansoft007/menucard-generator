@@ -1,29 +1,69 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { SectionDTO, ThemeConfig } from '@gc/shared-types';
-import { ComboCard, ItemCard, type CardOptions, type RenderMode } from './cards';
+import type { ReactNode } from 'react';
+import { ComboCard, FoldRibbon, ItemCard, type CardOptions, type RenderMode } from './cards';
 import { combosForSection, itemsForSection, type MenuData } from './menuData';
 import { backgroundStyle } from './styles';
 import { MM_PX } from './tokens';
 
-function Heading({ section, theme }: { section: SectionDTO; theme: ThemeConfig }) {
+function Heading({ section, theme, mode }: { section: SectionDTO; theme: ThemeConfig; mode: RenderMode }) {
   const c = theme.colors;
-  const style = section.config.headingStyle === 'theme' ? theme.headerStyle : section.config.headingStyle;
+  const kind = section.config.headingStyle === 'theme' ? theme.headerStyle : section.config.headingStyle;
+  const display = theme.fonts.display ?? theme.fonts.heading;
   const base = { fontFamily: `"${theme.fonts.heading}", serif`, fontWeight: 700, textTransform: 'uppercase' as const, lineHeight: 1.1, letterSpacing: '0.4pt' };
   const sub = section.subtitle && <div style={{ fontFamily: `"${theme.fonts.body}", sans-serif`, fontSize: '6.5pt', color: c.text, opacity: 0.8, marginTop: '1mm' }}>{section.subtitle}</div>;
-  return (
-    <div style={{ textAlign: 'center', marginBottom: '2.5mm' }}>
-      {style === 'brush-red' ? (
-        <span style={{ ...base, display: 'inline-block', background: c.special, color: '#fff', fontSize: '12pt', padding: '1.3mm 8mm', clipPath: 'polygon(0 12%,2% 0,50% 6%,98% 0,100% 14%,99% 88%,100% 100%,48% 94%,2% 100%,0 86%)' }}>{section.title}</span>
-      ) : style === 'ribbon' ? (
-        <span style={{ ...base, display: 'inline-block', background: c.accent, color: c.priceBadgeText, fontSize: '11pt', padding: '1.2mm 8mm', clipPath: 'polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)' }}>{section.title}</span>
-      ) : style === 'gold-bar' ? (
+  const o: CardOptions = { theme, mode, showDescription: true, showPrice: true, showQuantity: true, priceStyle: 'badge', imagePosition: 'top' };
+  let body: ReactNode;
+  switch (kind) {
+    case 'brush-red':
+      body = <span style={{ ...base, display: 'inline-block', background: c.special, color: '#fff', fontSize: '12pt', padding: '1.3mm 8mm', clipPath: 'polygon(0 12%,2% 0,50% 6%,98% 0,100% 14%,99% 88%,100% 100%,48% 94%,2% 100%,0 86%)' }}>{section.title}</span>;
+      break;
+    case 'ribbon':
+      body = <span style={{ ...base, display: 'inline-block', background: c.accent, color: c.priceBadgeText, fontSize: '11pt', padding: '1.2mm 8mm', clipPath: 'polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)' }}>{section.title}</span>;
+      break;
+    case 'gold-bar':
+      body = (
         <div>
           <span style={{ ...base, color: c.heading, fontSize: '13pt' }}>{section.title}</span>
           <div style={{ height: '0.7mm', margin: '1.2mm auto 0', width: '40%', background: `linear-gradient(90deg, transparent, ${c.accent}, transparent)` }} />
         </div>
-      ) : (
-        <span style={{ ...base, color: c.heading, fontSize: '13pt' }}>{section.title}</span>
-      )}
+      );
+      break;
+    case 'fold-ribbon':
+      body = <FoldRibbon text={section.title} o={o} size="14pt" />;
+      break;
+    case 'glow-banner':
+      body = (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3mm' }}>
+          <div style={{ flex: 1, height: '0.5mm', background: `linear-gradient(90deg, transparent, ${c.accent})`, boxShadow: `0 0 1.5mm ${c.accent}` }} />
+          <span style={{ fontFamily: `"${display}", serif`, fontStyle: 'italic', fontWeight: 700, fontSize: '16pt', color: c.heading, textShadow: `0 0 1.6mm ${c.accent}, 0 0 4mm ${c.accent}88`, lineHeight: 1.1 }}>{section.title}</span>
+          <div style={{ flex: 1, height: '0.5mm', background: `linear-gradient(270deg, transparent, ${c.accent})`, boxShadow: `0 0 1.5mm ${c.accent}` }} />
+        </div>
+      );
+      break;
+    case 'tag':
+      body = <span style={{ ...base, display: 'inline-block', background: c.accent, color: c.priceBadgeText, fontSize: '12pt', padding: '1.3mm 7mm', borderRadius: '1.2mm 7mm 1.2mm 7mm', boxShadow: '0 0.6mm 1.2mm rgba(0,0,0,.35)' }}>{section.title}</span>;
+      break;
+    case 'pill':
+      body = <span style={{ ...base, display: 'inline-block', border: `0.45mm solid ${c.accent}`, color: c.heading, fontSize: '11pt', padding: '1mm 7mm', borderRadius: '10mm', letterSpacing: '1pt', boxShadow: theme.card?.glow ? `0 0 1.4mm ${c.accent}88` : undefined }}>{section.title}</span>;
+      break;
+    case 'underline':
+      body = (
+        <div style={{ textAlign: 'left' }}>
+          <span style={{ ...base, color: c.heading, fontSize: '15pt', textTransform: 'none', fontFamily: `"${display}", serif`, fontStyle: 'italic' }}>{section.title}</span>
+          <div style={{ height: '0.4mm', marginTop: '1mm', background: `linear-gradient(90deg, ${c.accent}, ${c.accent}00)` }} />
+        </div>
+      );
+      break;
+    case 'stamp':
+      body = <span style={{ ...base, display: 'inline-block', border: `0.5mm double ${c.accent}`, color: c.heading, fontSize: '11pt', padding: '1.2mm 6mm', letterSpacing: '1.6pt' }}>{section.title}</span>;
+      break;
+    default:
+      body = <span style={{ ...base, color: c.heading, fontSize: '13pt' }}>{section.title}</span>;
+  }
+  return (
+    <div style={{ textAlign: kind === 'underline' ? 'left' : 'center', marginBottom: '2.8mm' }}>
+      {body}
       {sub}
     </div>
   );
@@ -60,7 +100,7 @@ export function SectionView({ section, data, theme, mode, onMeasure }: { section
   return (
     <div style={{ width: '100%', height: '100%', boxSizing: 'border-box', ...bgStyle, ...border }}>
       <div ref={ref} style={{ padding: `${pad}mm`, boxSizing: 'border-box' }}>
-        <Heading section={section} theme={theme} />
+        <Heading section={section} theme={theme} mode={mode} />
         {section.image && <img src={section.image.url} alt="" style={{ display: 'block', margin: '0 auto 2.5mm', maxWidth: '100%', maxHeight: '28mm', objectFit: 'contain' }} />}
         {cfg.showDescription && section.description && <div style={{ textAlign: 'center', fontSize: '6.5pt', color: theme.colors.text, opacity: 0.85, marginBottom: '2.5mm', fontFamily: `"${theme.fonts.body}", sans-serif` }}>{section.description}</div>}
 

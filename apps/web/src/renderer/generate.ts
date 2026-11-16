@@ -12,7 +12,7 @@ export function estimateSectionHeight(section: SectionDTO, data: MenuData, width
   const shown = c.rows ? Math.min(n, cols * c.rows) : n;
   const rows = Math.max(1, Math.ceil(shown / cols));
   const colW = (widthMm - 3 - 3 * (cols - 1)) / cols;
-  const card = { premium: colW * 0.75 + 26, 'image-left': Math.max(colW * 0.34 + 5, 26), 'image-top': colW * 0.625 + 24, 'compact-list': 11, featured: colW * 0.8 + 42, combo: colW * 0.625 + 40 }[c.cardTemplate];
+  const card = { premium: colW * 0.75 + 26, 'image-left': Math.max(colW * 0.34 + 5, 26), 'image-top': colW * 0.625 + 24, 'compact-list': 11, featured: colW * 0.8 + 42, combo: colW * 0.625 + 40, 'hero-ribbon': Math.max(colW * 0.5 + 16, 38), poster: colW * 1.1 + 4, 'circle-photo': 25 }[c.cardTemplate];
   const heading = 16 + (section.subtitle ? 5 : 0) + (section.description && c.showDescription ? 8 : 0) + (section.image ? 30 : 0);
   return Math.round((heading + rows * card + (rows - 1) * (c.cardTemplate === 'compact-list' ? 0 : 3) + 4) * 10) / 10;
 }
@@ -26,7 +26,13 @@ function headerBand(settings: PageSettings, data: MenuData): number {
     const { width, height } = logo.media;
     h += Math.min(45, width && height ? settings.logo.widthMm * (height / width) : settings.logo.widthMm * 0.5);
   }
-  if (settings.header.enabled && settings.header.text) h += 8;
+  const hd = settings.header;
+  if (hd.enabled && ((hd.icons?.length ?? 0) > 0 || hd.title)) {
+    // brand band: banner = one row as tall as the logo; stacked = logo, then a title row (+ ornament)
+    const logoH = logo ? h : 9;
+    return (hd.layout === 'stacked' ? logoH + 14 + (hd.ornament ? 6 : 0) : Math.max(logoH, 12) + (hd.ornament ? 6 : 0)) + GAP;
+  }
+  if (hd.enabled && hd.text) h += 8;
   return h ? h + GAP : 0;
 }
 

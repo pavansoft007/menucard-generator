@@ -9,7 +9,7 @@ export interface Issue {
 }
 
 const intersects = (a: LayoutElement, b: LayoutElement) => a.x < b.x + b.w - 0.5 && b.x < a.x + a.w - 0.5 && a.y < b.y + b.h - 0.5 && b.y < a.y + a.h - 0.5;
-const label = (e: LayoutElement) => e.name ?? { text: 'Text', image: 'Image', shape: 'Shape', logo: 'Logo', section: 'Section', itemCard: 'Item card' }[e.type];
+const label = (e: LayoutElement) => e.name ?? { text: 'Text', image: 'Image', shape: 'Shape', logo: 'Logo', section: 'Section', itemCard: 'Item card', icon: 'Icon', ornament: 'Ornament' }[e.type];
 
 /**
  * Print-safety checks for one page: content off the sheet, inside the binding strip, sections whose cards overflow

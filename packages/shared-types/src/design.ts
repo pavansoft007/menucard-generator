@@ -15,7 +15,21 @@ export const hexColor = z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a
 const font = z.string().trim().min(1, 'Required').max(80);
 
 /* ------------------------------------------------------------------- themes */
-export const shadowStyles = ['none', 'soft', 'strong', 'gold-glow'] as const;
+export const shadowStyles = ['none', 'soft', 'strong', 'gold-glow', 'neon'] as const;
+
+/** Section / theme heading looks. */
+export const headingStyleKinds = ['brush-red', 'gold-bar', 'ribbon', 'plain', 'fold-ribbon', 'glow-banner', 'tag', 'pill', 'underline', 'stamp'] as const;
+export type HeadingStyleKind = (typeof headingStyleKinds)[number];
+
+/** Line icons drawn by the renderer (header band, icon elements). */
+export const iconNames = ['drumstick', 'fries', 'drink', 'burger', 'pizza', 'icecream', 'coffee', 'dumpling', 'sandwich', 'chef-hat'] as const;
+export type IconName = (typeof iconNames)[number];
+export const ornamentKinds = ['diamond', 'double', 'stars', 'wave', 'dots', 'flourish'] as const;
+export type OrnamentKind = (typeof ornamentKinds)[number];
+export const patternKinds = ['none', 'dots', 'diagonal', 'grid', 'chevron', 'waves', 'halftone', 'sunburst', 'scales', 'crosses'] as const;
+export type PatternKind = (typeof patternKinds)[number];
+export const cardSurfaces = ['solid', 'glass', 'gradient', 'outline', 'paper'] as const;
+export type CardSurface = (typeof cardSurfaces)[number];
 export const themeConfigSchema = z.object({
   colors: z.object({
     background: hexColor, // primary page background
@@ -28,12 +42,14 @@ export const themeConfigSchema = z.object({
     priceBadgeText: hexColor,
     special: hexColor, // e.g. red category brush headers
   }),
-  fonts: z.object({ heading: font, body: font, price: font }),
+  fonts: z.object({ heading: font, body: font, price: font, display: font.optional() }), // display = script / title face
   border: z.object({ style: z.enum(['none', 'solid', 'double', 'dashed']), widthMm: mm(0, 10), color: hexColor }),
   borderRadiusMm: mm(0, 30),
   shadow: z.enum(shadowStyles),
-  headerStyle: z.enum(['brush-red', 'gold-bar', 'ribbon', 'plain']),
+  headerStyle: z.enum(headingStyleKinds),
   footerStyle: z.enum(['gold-line', 'bar', 'plain']),
+  /** How menu cards are filled; optional so older themes keep working. */
+  card: z.object({ surface: z.enum(cardSurfaces), glow: z.boolean() }).optional(),
 });
 export type ThemeConfig = z.infer<typeof themeConfigSchema>;
 
@@ -95,6 +111,13 @@ export const backgroundConfigSchema = z.object({
   shadow: z.enum(shadowStyles),
   paddingMm: mm(0, 50),
   marginMm: mm(0, 50),
+  /** Repeating pattern drawn above the colour/gradient and below an uploaded image. */
+  pattern: z.enum(patternKinds).optional(),
+  patternColor: hexColor.optional(),
+  patternOpacity: z.number().min(0).max(1).optional(),
+  patternSizeMm: mm(2, 80).optional(),
+  /** Soft coloured light spots (bokeh-style glows), positions/sizes in percent of the page. */
+  glows: z.array(z.object({ color: hexColor, x: z.number().min(-20).max(120), y: z.number().min(-20).max(120), size: z.number().min(5).max(200), opacity: z.number().min(0).max(1) })).max(6).optional(),
 });
 export type BackgroundConfig = z.infer<typeof backgroundConfigSchema>;
 export const defaultBackgroundConfig: BackgroundConfig = {
@@ -185,9 +208,18 @@ export const pageSettingsSchema = z
     contentLayout: z.enum(['stack', 'grid', 'free']),
     backgroundId: nullableId,
     backgroundColor: hexColor.nullable(),
-    border: z.object({ enabled: z.boolean(), style: z.enum(['solid', 'double', 'dashed']), color: hexColor, widthMm: mm(0, 10), radiusMm: mm(0, 30) }),
+    border: z.object({ enabled: z.boolean(), style: z.enum(['solid', 'double', 'dashed', 'glow', 'ornate']), color: hexColor, widthMm: mm(0, 10), radiusMm: mm(0, 30) }),
     logo: z.object({ enabled: z.boolean(), logoId: nullableId, widthMm: mm(5, 200), position: z.enum(['left', 'center', 'right']) }),
-    header: z.object({ enabled: z.boolean(), text: optText(200) }),
+    header: z.object({
+      enabled: z.boolean(),
+      text: optText(200),
+      /** Optional brand band: line icons flanking the logo plus a title (e.g. a script "Menu"). */
+      layout: z.enum(['banner', 'stacked']).optional(),
+      icons: z.array(z.enum(iconNames)).max(8).optional(),
+      title: optText(80).optional(), // supports {{page.title}} etc.
+      titleFont: z.enum(['display', 'heading']).optional(),
+      ornament: z.enum(ornamentKinds).nullable().optional(),
+    }),
     footer: z.object({ enabled: z.boolean(), text: optText(400), useRestaurantInfo: z.boolean() }),
     showPageNumber: z.boolean(),
   })
@@ -280,13 +312,16 @@ export const sectionElementSchema = elementBase.extend({ type: z.literal('sectio
 export const itemCardElementSchema = elementBase.extend({
   type: z.literal('itemCard'),
   itemId: id,
-  template: z.enum(['premium', 'image-left', 'image-top', 'compact-list', 'featured', 'combo']),
+  template: z.enum(['premium', 'image-left', 'image-top', 'compact-list', 'featured', 'combo', 'hero-ribbon', 'poster', 'circle-photo']),
   showDescription: z.boolean(),
   showPrice: z.boolean(),
   showQuantity: z.boolean(),
 });
 
-export const layoutElementSchema = z.discriminatedUnion('type', [textElementSchema, imageElementSchema, shapeElementSchema, logoElementSchema, sectionElementSchema, itemCardElementSchema]);
+export const iconElementSchema = elementBase.extend({ type: z.literal('icon'), icon: z.enum(iconNames), color: colorRefSchema, strokeMm: mm(0.1, 3) });
+export const ornamentElementSchema = elementBase.extend({ type: z.literal('ornament'), kind: z.enum(ornamentKinds), color: colorRefSchema, strokeMm: mm(0.1, 3) });
+
+export const layoutElementSchema = z.discriminatedUnion('type', [textElementSchema, imageElementSchema, shapeElementSchema, logoElementSchema, sectionElementSchema, itemCardElementSchema, iconElementSchema, ornamentElementSchema]);
 export type LayoutElement = z.infer<typeof layoutElementSchema>;
 export type TextElement = z.infer<typeof textElementSchema>;
 export type ImageElement = z.infer<typeof imageElementSchema>;
@@ -294,6 +329,8 @@ export type ShapeElement = z.infer<typeof shapeElementSchema>;
 export type LogoElement = z.infer<typeof logoElementSchema>;
 export type SectionElement = z.infer<typeof sectionElementSchema>;
 export type ItemCardElement = z.infer<typeof itemCardElementSchema>;
+export type IconElement = z.infer<typeof iconElementSchema>;
+export type OrnamentElement = z.infer<typeof ornamentElementSchema>;
 
 export const pageLayoutSchema = z.object({
   version: z.literal(1),
@@ -316,7 +353,7 @@ export const pageInputSchema = z.object({
 export type PageInput = z.infer<typeof pageInputSchema>;
 
 /* ----------------------------------------------------------------- sections */
-export const cardTemplates = ['premium', 'image-left', 'image-top', 'compact-list', 'featured', 'combo'] as const;
+export const cardTemplates = ['premium', 'image-left', 'image-top', 'compact-list', 'featured', 'combo', 'hero-ribbon', 'poster', 'circle-photo'] as const;
 export type CardTemplate = (typeof cardTemplates)[number];
 
 export const sectionConfigSchema = z.object({
@@ -326,8 +363,8 @@ export const sectionConfigSchema = z.object({
   widthPct: mm(10, 100),
   heightMm: mm(10, 1000).nullable(),
   border: z.object({ enabled: z.boolean(), style: z.enum(['solid', 'double', 'dashed']), color: hexColor, widthMm: mm(0, 10) }),
-  headingStyle: z.enum(['theme', 'brush-red', 'gold-bar', 'plain']),
-  priceStyle: z.enum(['badge', 'plain', 'inline']),
+  headingStyle: z.enum(['theme', ...headingStyleKinds]),
+  priceStyle: z.enum(['badge', 'plain', 'inline', 'pill-gold', 'pill-outline', 'circle']),
   imagePosition: z.enum(['left', 'right', 'top', 'bottom']),
   showDescription: z.boolean(),
   showPrice: z.boolean(),

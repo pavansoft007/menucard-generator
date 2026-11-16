@@ -5,6 +5,9 @@ import { CARD_TEMPLATE_LABELS, ComboCard, ItemCard, type CardOptions } from '../
 import { themeFor, useMenuData } from '../../renderer/menuData';
 import { MM_PX } from '../../renderer/tokens';
 import { ErrorAlert, ListSkeleton, PageHeader } from '../../components/common';
+import { Tab, Tabs } from '@mui/material';
+import { useState } from 'react';
+import PageDesigns from './PageDesigns';
 
 const DESCRIPTIONS: Record<CardTemplate, string> = {
   premium: 'Large food image, name, description, quantity and price. The workhorse card.',
@@ -13,10 +16,13 @@ const DESCRIPTIONS: Record<CardTemplate, string> = {
   'compact-list': 'Small image, name and description with the price aligned right – dense lists.',
   featured: 'Premium double border, bestseller ribbon and a large price badge for hero items.',
   combo: 'Shows the included items, the combo price and the saving. Uses the combos assigned to a section.',
+  'hero-ribbon': 'Folded ribbon title over a large photo with stacked gold price pills – the classic fast-food menu card.',
+  poster: 'Full-bleed photo with the name and price pills laid over a dark gradient.',
+  'circle-photo': 'Round photo with an accent ring beside the name, description and prices.',
 };
 
 /** The reusable card designs. Pick one per section in the Page Builder / editor (Templates tab). */
-export default function TemplatesPage() {
+function CardStyles() {
   const { data, isLoading, error, refetch } = useMenuData();
   const theme = themeFor(data, null);
   const item = data.items.find((i) => i.isActive);
@@ -27,7 +33,6 @@ export default function TemplatesPage() {
 
   return (
     <>
-      <PageHeader title="Menu Templates" subtitle="Reusable card designs for menu sections. Previews use your real items and your default theme." />
       {isLoading ? <ListSkeleton rows={3} height={200} /> : error ? <ErrorAlert error={error} onRetry={() => refetch()} /> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {(Object.keys(CARD_TEMPLATE_LABELS) as CardTemplate[]).map((t) => {
@@ -55,6 +60,22 @@ export default function TemplatesPage() {
       <Typography variant="body2" color="text.secondary" mt={3}>
         Apply a template from the <Link component={RouterLink} to="/pages">page designer</Link> (Templates tab) or per section under <Link component={RouterLink} to="/sections">Menu Sections</Link>.
       </Typography>
+    </>
+  );
+}
+
+/** Menu Templates: complete page designs (theme + background + frame + cards) and the individual card styles. */
+export default function TemplatesPage() {
+  const [tab, setTab] = useState(0);
+  const { data, isLoading, error, refetch } = useMenuData();
+  return (
+    <>
+      <PageHeader title="Menu Templates" subtitle="Premium ready-made designs for your whole menu, and the reusable card styles they are built from." />
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Tab label="Page designs (24)" />
+        <Tab label="Card styles" />
+      </Tabs>
+      {tab === 0 ? (isLoading ? <ListSkeleton rows={3} height={220} /> : error ? <ErrorAlert error={error} onRetry={() => refetch()} /> : <PageDesigns data={data} />) : <CardStyles />}
     </>
   );
 }

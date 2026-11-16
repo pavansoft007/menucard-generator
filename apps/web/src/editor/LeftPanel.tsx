@@ -20,7 +20,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
-import { defaultPageSettings, emptyLayout, type CardTemplate, type MediaDTO } from '@gc/shared-types';
+import { defaultPageSettings, emptyLayout, iconNames, ornamentKinds, type CardTemplate, type MediaDTO } from '@gc/shared-types';
+import { LineIcon, Ornament } from '../renderer/icons';
 import { ItemCard, CARD_TEMPLATE_LABELS, ComboCard, type CardOptions } from '../renderer/cards';
 import { themeFor, type MenuData } from '../renderer/menuData';
 import { backgroundStyle } from '../renderer/styles';
@@ -120,6 +121,22 @@ function ElementsTab({ data, onAdd }: { data: MenuData; onAdd: (p: Payload) => v
       <Typography variant="overline" color="text.secondary">Design elements</Typography>
       <div className="mb-3 grid grid-cols-2 gap-2">
         {DESIGN_PRESETS.map((p) => <Tile key={p.id} icon={<WidgetsIcon fontSize="small" />} label={p.label} onClick={() => onAdd({ kind: 'preset', id: p.id })} {...drag({ kind: 'preset', id: p.id })} />)}
+      </div>
+      <Typography variant="overline" color="text.secondary">Line icons</Typography>
+      <div className="mb-3 grid grid-cols-5 gap-1.5">
+        {iconNames.map((n) => (
+          <Box key={n} role="button" tabIndex={0} title={n} aria-label={`Add ${n} icon`} onClick={() => onAdd({ kind: 'element', id: `icon:${n}` })} onKeyDown={(e) => e.key === 'Enter' && onAdd({ kind: 'element', id: `icon:${n}` })} {...drag({ kind: 'element', id: `icon:${n}` })} sx={{ aspectRatio: '1', p: 0.8, border: 1, borderColor: 'divider', borderRadius: 1, cursor: 'pointer', color: 'text.primary', '&:hover': { borderColor: 'primary.main' } }}>
+            <LineIcon name={n} color="currentColor" strokeMm={0.5} sizeMm={9} />
+          </Box>
+        ))}
+      </div>
+      <Typography variant="overline" color="text.secondary">Ornaments &amp; dividers</Typography>
+      <div className="mb-3 grid grid-cols-2 gap-1.5">
+        {ornamentKinds.map((k) => (
+          <Box key={k} role="button" tabIndex={0} title={k} aria-label={`Add ${k} ornament`} onClick={() => onAdd({ kind: 'element', id: `ornament:${k}` })} onKeyDown={(e) => e.key === 'Enter' && onAdd({ kind: 'element', id: `ornament:${k}` })} {...drag({ kind: 'element', id: `ornament:${k}` })} sx={{ p: 0.8, border: 1, borderColor: 'divider', borderRadius: 1, cursor: 'pointer', color: 'text.primary', height: 30, '&:hover': { borderColor: 'primary.main' } }}>
+            <Ornament kind={k} color="currentColor" strokeMm={0.4} widthMm={40} />
+          </Box>
+        ))}
       </div>
       <Typography variant="overline" color="text.secondary">Logos</Typography>
       {data.logos.length === 0 ? <Typography variant="body2" color="text.secondary">No logos uploaded yet.</Typography> : (

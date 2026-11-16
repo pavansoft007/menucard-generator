@@ -19,7 +19,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
-import { cardTemplates, resolvePageSize, type ItemCardElement, type LayoutElement, type SectionElement, type TextElement } from '@gc/shared-types';
+import { cardTemplates, iconNames, ornamentKinds, resolvePageSize, type ItemCardElement, type LayoutElement, type SectionElement, type TextElement } from '@gc/shared-types';
 import { BUNDLED_FONTS } from '../renderer/fonts';
 import { themeFor, type MenuData } from '../renderer/menuData';
 import { CARD_TEMPLATE_LABELS } from '../renderer/cards';
@@ -154,7 +154,7 @@ function ElementProps({ elements, data, onEditSection }: { elements: LayoutEleme
 
   return (
     <>
-      <Group title={one ? ({ text: 'Text', image: 'Image', shape: 'Shape', logo: 'Logo', section: 'Section', itemCard: 'Item card' } as const)[one.type] : `${elements.length} elements`}>
+      <Group title={one ? ({ text: 'Text', image: 'Image', shape: 'Shape', logo: 'Logo', section: 'Section', itemCard: 'Item card', icon: 'Icon', ornament: 'Ornament' } as const)[one.type] : `${elements.length} elements`}>
         {one && <TextField size="small" label="Layer name" value={one.name ?? ''} onChange={(e) => patch({ name: e.target.value || null }, 'name')} slotProps={{ inputLabel: { shrink: true } }} />}
         <div className="flex flex-wrap items-center gap-0.5">
           <Tooltip title={elements.every((e) => e.locked) ? 'Unlock' : 'Lock'}><IconButton {...ICON_BTN} aria-label="Toggle lock" onClick={() => patch({ locked: !elements.every((e) => e.locked) })}>{elements.every((e) => e.locked) ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}</IconButton></Tooltip>
@@ -212,6 +212,20 @@ function ElementProps({ elements, data, onEditSection }: { elements: LayoutEleme
             <MenuItem value="">Primary logo</MenuItem>
             {data.logos.map((l) => <MenuItem key={l.id} value={l.id}>{l.label}</MenuItem>)}
           </TextField>
+        </Group>
+      )}
+      {one?.type === 'icon' && (
+        <Group title="Icon">
+          <Sel label="Icon" value={one.icon} onChange={(v) => patch({ icon: v } as Partial<LayoutElement>)} options={iconNames} />
+          <ColorRefField label="Colour" theme={theme} value={one.color} onChange={(v) => v && patch({ color: v } as Partial<LayoutElement>)} />
+          <Num label="Line weight" suffix="mm" min={0.1} max={3} step={0.05} value={one.strokeMm} onChange={(v) => patch({ strokeMm: v } as Partial<LayoutElement>, 'stroke')} />
+        </Group>
+      )}
+      {one?.type === 'ornament' && (
+        <Group title="Ornament">
+          <Sel label="Style" value={one.kind} onChange={(v) => patch({ kind: v } as Partial<LayoutElement>)} options={ornamentKinds} />
+          <ColorRefField label="Colour" theme={theme} value={one.color} onChange={(v) => v && patch({ color: v } as Partial<LayoutElement>)} />
+          <Num label="Line weight" suffix="mm" min={0.1} max={3} step={0.05} value={one.strokeMm} onChange={(v) => patch({ strokeMm: v } as Partial<LayoutElement>, 'stroke')} />
         </Group>
       )}
       {one?.type === 'section' && <SectionProps el={one} data={data} onEditSection={onEditSection} />}

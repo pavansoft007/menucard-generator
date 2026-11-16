@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { resolvePageSize, sheetLayout, type ExportOptions } from '@gc/shared-types';
 import { layoutIssues, type Issue } from '../../editor/issues';
 import { effectiveElements, PageRenderer, type RenderablePage } from '../../renderer/PageRenderer';
+import { safeArea } from '../../renderer/geometry';
 import { useMenuData, type MenuData } from '../../renderer/menuData';
 import { setRenderToken } from '../../services/api';
 
@@ -58,6 +59,7 @@ export default function RenderPage() {
   const rendered = useMemo(() => (useOriginal ? withOriginals(data) : data), [data, useOriginal]);
   const dbPage = data.pages.find((p) => p.id === Number(pageId));
   const measured = useRef<Record<string, number>>({});
+  const flowHeight = useRef<number | null>(null);
   const root = useRef<HTMLDivElement>(null);
 
   const page = useMemo<RenderablePage | null>(
@@ -89,6 +91,14 @@ export default function RenderPage() {
       if (cancelled) return;
       const found = layoutIssues(effectiveElements(page, rendered, pageNumber, 'export'), page.settings, pageNumber, measured.current);
       const issues = found.map((i) => ({ level: i.level, message: i.message }));
+      // An automatically laid-out page flows top to bottom: it must end above the footer.
+      if (flowHeight.current !== null) {
+        const area = safeArea(page.settings, pageNumber);
+        const room = area.height - (page.settings.footer.enabled ? 11 : 0);
+        if (flowHeight.current > room + 0.5) {
+          issues.push({ level: 'error', message: `The content is ${(flowHeight.current - room).toFixed(1)} mm too tall for this page and runs into the footer – reduce columns/rows, use a compact card style, or move a section to another page.` });
+        }
+      }
       for (const b of broken) issues.push({ level: 'error', message: `An image failed to load (${b}) and would print blank.` });
       window.__GC_ISSUES__ = issues;
       window.__GC_READY__ = true;
@@ -115,7 +125,7 @@ export default function RenderPage() {
       `}</style>
       <div ref={root} data-render-sheet style={{ position: 'relative', width: `${sheet.sheetW}mm`, height: `${sheet.sheetH}mm`, background: bleedColor, overflow: 'hidden' }}>
         <div style={{ position: 'absolute', left: `${sheet.offsetX}mm`, top: `${sheet.offsetY}mm`, width: `${size.widthMm}mm`, height: `${size.heightMm}mm`, transform: sheet.scale === 1 ? undefined : `scale(${sheet.scale})`, transformOrigin: '0 0' }}>
-          <PageRenderer page={page} pageNumber={pageNumber} totalPages={total} data={rendered} mode="export" onMeasureElement={(id, h) => { measured.current[id] = h; }} />
+          <PageRenderer page={page} pageNumber={pageNumber} totalPages={total} data={rendered} mode="export" onMeasureElement={(id, h) => { measured.current[id] = h; }} onMeasureFlow={(h) => { flowHeight.current = h; }} />
         </div>
       </div>
     </>

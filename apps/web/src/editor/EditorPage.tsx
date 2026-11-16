@@ -21,7 +21,7 @@ import { keys, sectionService } from '../services/menuService';
 import { sectionToInput } from '../services/sectionInput';
 import { useUiStore } from '../store/uiStore';
 import { Canvas, type DropPayload } from './Canvas';
-import { DESIGN_PRESETS, makeHeading, makeImage, makeItemCard, makeLogo, makeSection, makeShape, makeText } from './elements';
+import { DESIGN_PRESETS, makeHeading, makeIcon, makeImage, makeItemCard, makeLogo, makeOrnament, makeSection, makeShape, makeText } from './elements';
 import { boundsOf, rectOf, round1 } from './geometry';
 import { layoutIssues } from './issues';
 import { LeftPanel } from './LeftPanel';
@@ -132,6 +132,9 @@ export default function EditorPage() {
     const nid = typeof p.id === 'number' ? p.id : 0;
     switch (p.kind) {
       case 'element': {
+        const sid = String(p.id);
+        if (sid.startsWith('icon:')) { st.addElements(centre([makeIcon(sid.slice(5) as never)], x, y)); break; }
+        if (sid.startsWith('ornament:')) { st.addElements(centre([makeOrnament(sid.slice(9) as never)], x, y)); break; }
         const made = { text: () => makeText(), heading: () => makeHeading(), image: () => makeImage(null), rect: () => makeShape('rect'), ellipse: () => makeShape('ellipse'), line: () => makeShape('line') }[String(p.id) as 'text'];
         if (made) st.addElements(centre([made()], x, y));
         break;

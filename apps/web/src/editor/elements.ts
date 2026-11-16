@@ -1,4 +1,4 @@
-import type { CardTemplate, ImageElement, ItemCardElement, LayoutElement, LogoElement, SectionElement, ShapeElement, TextElement } from '@gc/shared-types';
+import type { CardTemplate, IconElement, IconName, ImageElement, ItemCardElement, LayoutElement, LogoElement, OrnamentElement, OrnamentKind, SectionElement, ShapeElement, TextElement } from '@gc/shared-types';
 
 let counter = 0;
 export const newId = () => `el_${Date.now().toString(36)}${(counter++).toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -71,6 +71,9 @@ export const makeItemCard = (itemId: number, template: CardTemplate = 'premium',
   showQuantity: true,
   ...over,
 });
+
+export const makeIcon = (icon: IconName, over: Partial<IconElement> = {}): IconElement => ({ ...base({ x: 20, y: 20, w: 14, h: 14 }), type: 'icon', icon, color: 'theme:text', strokeMm: 0.45, ...over });
+export const makeOrnament = (kind: OrnamentKind, over: Partial<OrnamentElement> = {}): OrnamentElement => ({ ...base({ x: 40, y: 20, w: 110, h: 11 }), type: 'ornament', kind, color: 'theme:accent', strokeMm: 0.3, ...over });
 
 /** Presets shown under "Design elements". */
 export const DESIGN_PRESETS: { id: string; label: string; make: () => LayoutElement[] }[] = [
