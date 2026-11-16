@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { loginSchema } from '@gc/shared-types';
+import { changePasswordSchema, loginSchema } from '@gc/shared-types';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { validateBody } from '../../middleware/validate.js';
-import { requireAuth } from '../../middleware/auth.js';
+import { requireAuth, requireFullAuth } from '../../middleware/auth.js';
 import * as service from './auth.service.js';
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
@@ -24,6 +24,16 @@ authRouter.post(
 authRouter.post('/logout', requireAuth, (_req, res) => {
   res.json({ success: true, data: { loggedOut: true } });
 });
+
+authRouter.post(
+  '/change-password',
+  rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false }),
+  requireFullAuth,
+  validateBody(changePasswordSchema),
+  asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await service.changePassword(req.auth!.sub, req.body.currentPassword, req.body.newPassword) });
+  }),
+);
 
 authRouter.get(
   '/profile',

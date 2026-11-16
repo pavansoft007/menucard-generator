@@ -94,6 +94,12 @@ const ElementView = memo(function ElementView({ el, data, theme, mode, values, o
   return <div data-el-id={el.id} data-el-type={el.type} style={style}>{body}</div>;
 });
 
+/** The elements actually drawn: the saved layout, or the automatic stacked layout for a never-designed page. */
+export function effectiveElements(page: RenderablePage, data: MenuData, pageNumber: number, mode: RenderMode): LayoutElement[] {
+  const auto = mode !== 'edit' && page.layout.elements.length === 0 && !page.layout.blank && page.id !== undefined;
+  return auto ? generateLayout(page, data.sections.filter((x) => x.pageId === page.id).sort((a, b) => a.displayOrder - b.displayOrder), data, pageNumber) : page.layout.elements;
+}
+
 /* --------------------------------------------------------------------- page */
 export interface PageRendererProps {
   page: RenderablePage;
@@ -127,9 +133,7 @@ export function PageRenderer({ page, pageNumber, totalPages, data, mode, showGui
   const footerLines = [footerText, contact, !s.footer.text && !s.footer.useRestaurantInfo ? values['restaurant.footerText'] : ''].filter(Boolean);
   const headerText = s.header.enabled && s.header.text ? fillTokens(s.header.text, values) : '';
   const justify = ({ left: 'flex-start', center: 'center', right: 'flex-end' } as const)[s.logo.position];
-  // A page nobody has opened in the editor yet (no elements, not marked blank) gets the automatic stacked layout.
-  const auto = mode !== 'edit' && page.layout.elements.length === 0 && !page.layout.blank && page.id !== undefined;
-  const elements = auto ? generateLayout(page, data.sections.filter((x) => x.pageId === page.id).sort((a, b) => a.displayOrder - b.displayOrder), data, pageNumber) : page.layout.elements;
+  const elements = effectiveElements(page, data, pageNumber, mode);
   const sorted = [...elements].sort((a, b) => a.z - b.z);
 
   return (

@@ -20,6 +20,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ForeignKeyConstraintError) {
     return void send(res, 409, 'CONFLICT', 'This record is referenced by other data and cannot be changed this way');
   }
+  if ((err as { type?: string })?.type === 'entity.too.large') return void send(res, 413, 'PAYLOAD_TOO_LARGE', 'The request is too large');
   if (err instanceof SyntaxError && 'body' in err) return void send(res, 400, 'BAD_REQUEST', 'Malformed JSON body');
   if (env.NODE_ENV !== 'test' || process.env.DEBUG_ERRORS) console.error(err);
   send(res, 500, 'INTERNAL_ERROR', 'Internal server error');

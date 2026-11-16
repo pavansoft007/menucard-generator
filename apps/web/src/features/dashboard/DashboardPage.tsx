@@ -1,6 +1,6 @@
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardActionArea, CardContent, Chip, Skeleton, Typography } from '@mui/material';
+import { Card, CardActionArea, CardContent, Skeleton, Typography } from '@mui/material';
 import { navItems } from '../../components/layout/navItems';
 import { useAuthStore } from '../../store/authStore';
 import { dashboardService, keys } from '../../services/menuService';
@@ -54,7 +54,7 @@ export default function DashboardPage() {
         <Stat label="Uploaded images" value={s?.totalImages} to="/media" />
         <Stat label="Menu pages" value={s?.totalPages} to="/pages" />
         <Stat label="Last published" value={s ? (s.lastPublishedAt ? new Date(s.lastPublishedAt).toLocaleDateString() : 'Never') : undefined} to="/pages" />
-        <Stat label="Last generated menu" value={s ? (s.lastGeneratedMenu ?? 'Never') : undefined} hint={s && !s.lastGeneratedMenu ? 'PDF export arrives in Phase 5' : undefined} />
+        <Stat label="Last generated menu" value={s ? (s.lastGeneratedMenu ? new Date(s.lastGeneratedMenu).toLocaleDateString() : 'Never') : undefined} to="/export" />
       </div>
 
       <div>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
         </Typography>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {navItems
-            .filter((n) => n.path !== '/')
+            .filter((n) => n.path !== '/' && (!n.adminOnly || user?.role === 'admin'))
             .map((n) => (
               <Card key={n.path} variant="outlined">
                 <CardActionArea component={RouterLink} to={n.path}>
@@ -72,7 +72,6 @@ export default function DashboardPage() {
                     <Typography flex={1} fontWeight={600}>
                       {n.label}
                     </Typography>
-                    {n.phase > 3 && <Chip size="small" label={`Phase ${n.phase}`} />}
                   </CardContent>
                 </CardActionArea>
               </Card>

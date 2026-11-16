@@ -8,6 +8,10 @@ import { env } from '../config/env.js';
 import { categorySeed, restaurantSeed } from './seedData.js';
 
 async function seedAdmin() {
+  if (env.NODE_ENV === 'production' && env.ADMIN_PASSWORD === 'ChangeMe123!') {
+    console.error('Refusing to seed the default admin password in production. Set ADMIN_PASSWORD in .env.');
+    process.exit(1);
+  }
   if (await User.findOne({ where: { email: env.ADMIN_EMAIL } })) return console.log('Admin user already exists');
   await User.create({
     email: env.ADMIN_EMAIL,
@@ -44,6 +48,9 @@ async function seedMenu() {
   console.log(`Seeded ${categorySeed.length} categories and ${categorySeed.reduce((n, c) => n + c.items.length, 0)} items`);
 }
 
+/** Photo-less drink lists read best as a compact two-column list, which also lets three sections share one A4 page. */
+const DENSE = new Set(['Mocktails & Mojitos', 'Milk Shakes', 'Cool Drinks']);
+
 /** Default theme, two colour/gradient backgrounds and a starting page structure (editable, deletable). */
 async function seedDesign() {
   if ((await MenuTheme.count({ paranoid: false })) === 0) {
@@ -75,7 +82,7 @@ async function seedDesign() {
     for (const [si, name] of pg.sections.entries()) {
       const categoryId = cats.get(name);
       if (!categoryId) continue;
-      const section = await MenuSection.create({ pageId: page.id, title: name, subtitle: null, description: null, imageMediaId: null, backgroundId: null, displayOrder: si + 1, config: defaultSectionConfig });
+      const section = await MenuSection.create({ pageId: page.id, title: name, subtitle: null, description: null, imageMediaId: null, backgroundId: null, displayOrder: si + 1, config: DENSE.has(name) ? { ...defaultSectionConfig, cardTemplate: 'compact-list', columns: 2 } : defaultSectionConfig });
       await MenuSectionCategory.create({ sectionId: section.id, categoryId, displayOrder: 1 });
     }
   }

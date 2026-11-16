@@ -48,6 +48,19 @@ export const mediaUpdateSchema = z.object({
 });
 export type MediaUpdateInput = z.infer<typeof mediaUpdateSchema>;
 
+/** Crop box as fractions (0–1) of the displayed, EXIF-corrected image; always creates a NEW image, the original is never touched. */
+export const mediaCropSchema = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    w: z.number().min(0.005).max(1),
+    h: z.number().min(0.005).max(1),
+    /** Resize the result to this width (px); height follows the aspect ratio. Never upscales. */
+    outputWidth: z.number().int().min(16).max(6000).nullable(),
+  })
+  .refine((c) => c.x + c.w <= 1.0001 && c.y + c.h <= 1.0001, 'The crop area must stay inside the image');
+export type MediaCropInput = z.infer<typeof mediaCropSchema>;
+
 /* ---------------------------------------------------------------- restaurant */
 export const restaurantInputSchema = z.object({
   name: z.string().trim().min(1, 'Required').max(120),

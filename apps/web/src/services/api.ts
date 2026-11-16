@@ -12,8 +12,12 @@ export class ApiError extends Error {
   }
 }
 
+// Set by the chrome-free /render route: a short-lived read-only token passed in the URL (never persisted).
+let renderToken: string | null = null;
+export const setRenderToken = (t: string | null) => { renderToken = t; };
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<ApiSuccess<T>> {
-  const token = useAuthStore.getState().token;
+  const token = renderToken ?? useAuthStore.getState().token;
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -29,7 +33,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<ApiSucc
   }
 
   if (!res.ok || !body || !body.success) {
-    if (res.status === 401 && token) useAuthStore.getState().clear();
+    if (res.status === 401 && token && !renderToken) useAuthStore.getState().clear();
     const err = body && !body.success ? body.error : null;
     throw new ApiError(res.status, err?.code ?? 'UNKNOWN', err?.message ?? `Request failed (${res.status})`, err?.details);
   }

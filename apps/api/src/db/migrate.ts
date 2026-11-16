@@ -5,9 +5,11 @@ import { sequelize } from './sequelize.js';
 
 export const umzug = new Umzug({
   migrations: {
-    glob: ['../migrations/*.ts', { cwd: import.meta.dirname }],
+    // .ts when running from source (tsx), .js in the production bundle
+    glob: ['../migrations/*.{ts,js}', { cwd: import.meta.dirname, ignore: ['**/*.d.ts', '**/*.map'] }],
     resolve: ({ name, path: p }) => ({
-      name,
+      // Recorded as "NNN-title.ts" in both modes, so a database migrated from source and one migrated from the bundle agree.
+      name: name.replace(/\.js$/, '.ts'),
       up: async () => (await import(pathToFileURL(p!).href)).up(sequelize.getQueryInterface()),
       down: async () => (await import(pathToFileURL(p!).href)).down(sequelize.getQueryInterface()),
     }),

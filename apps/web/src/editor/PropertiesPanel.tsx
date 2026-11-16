@@ -69,7 +69,7 @@ function PageProps({ data, pageNumber, issues, onGenerate, onStack, onClear }: {
 
       <Group title="Layout tools">
         <Button size="small" variant="outlined" onClick={onGenerate}>Generate layout from sections</Button>
-        <Button size="small" variant="outlined" onClick={onStack}>Stack sections without overlap</Button>
+        <Button size="small" variant="outlined" onClick={onStack}>Fit sections to content &amp; stack</Button>
         <Button size="small" color="error" onClick={onClear}>Clear page</Button>
       </Group>
 

@@ -21,6 +21,7 @@ export interface NavItem {
   path: string;
   icon: ReactNode;
   phase: number; // roadmap phase in which the module is delivered
+  adminOnly?: boolean;
 }
 
 export const navItems: NavItem[] = [
@@ -38,6 +39,6 @@ export const navItems: NavItem[] = [
   { label: 'Templates', path: '/templates', icon: <DashboardCustomizeIcon />, phase: 4 },
   { label: 'Menu Preview', path: '/preview', icon: <VisibilityIcon />, phase: 4 },
   { label: 'PDF Export', path: '/export', icon: <PictureAsPdfIcon />, phase: 5 },
-  { label: 'Users', path: '/users', icon: <GroupIcon />, phase: 6 },
+  { label: 'Users', path: '/users', icon: <GroupIcon />, phase: 6, adminOnly: true },
   { label: 'App Settings', path: '/settings', icon: <SettingsIcon />, phase: 6 },
 ];

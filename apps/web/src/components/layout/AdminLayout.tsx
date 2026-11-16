@@ -57,7 +57,7 @@ export default function AdminLayout() {
       </Toolbar>
       <Divider />
       <List sx={{ flex: 1, overflowY: 'auto', px: 1 }}>
-        {navItems.map((n) => (
+        {navItems.filter((n) => !n.adminOnly || user?.role === 'admin').map((n) => (
           <ListItemButton
             key={n.path}
             component={NavLink}

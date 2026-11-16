@@ -3,8 +3,13 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "workspaces": ["apps/*", "packages/*"],
-  "overrides": { "vite": "^6.0.5" },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "overrides": {
+    "vite": "^6.0.5"
+  },
   "scripts": {
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
@@ -15,14 +20,16 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "smoke": "node scripts/smoke.mjs",
+    "build:all": "npm run build -w @gc/web && npm run build -w @gc/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "eslint": "^9.17.0",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.0",
     "eslint-plugin-react-hooks": "^5.1.0",
-    "globals": "^15.14.0"
+    "globals": "^15.14.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.72.2"
   }
 }

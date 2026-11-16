@@ -1,0 +1,53 @@
+# Production stack: MySQL + the app (API + web + PDF renderer in one container).
+#   cp .env.production.example .env.production   # then edit the secrets
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env.production}
+      MYSQL_DATABASE: ${DB_NAME:-goldencrunch}
+      MYSQL_USER: ${DB_USER:-goldencrunch}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env.production}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    # No published port: only the app can reach the database.
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-goldencrunch}
+      DB_USER: ${DB_USER:-goldencrunch}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.production (openssl rand -hex 48)}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      CORS_ORIGINS: ${PUBLIC_URL:-http://localhost:4000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@goldencrunch.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env.production}
+      FORCE_HTTPS: ${FORCE_HTTPS:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+    ports:
+      - "${APP_PORT:-4000}:4000"
+    volumes:
+      - uploads:/app/uploads
+      - exports:/app/exports
+    # Applies pending database migrations, creates the first admin / sample data once, then starts the server.
+    command: ["sh", "-c", "node dist/db/migrate.js up && node dist/db/seed.js && node dist/server.js"]
+
+volumes:
+  mysql_data:
+  uploads:
+  exports:

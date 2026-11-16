@@ -5,6 +5,7 @@ import { env } from '../config/env.js';
 /** Storage abstraction – swap LocalStorage for an S3/GCS driver without touching callers. */
 export interface StorageDriver {
   write(relPath: string, data: Buffer): Promise<void>;
+  read(relPath: string): Promise<Buffer>;
   remove(relPath: string): Promise<void>;
   publicUrl(relPath: string): string;
 }
@@ -23,6 +24,10 @@ class LocalStorage implements StorageDriver {
     const abs = this.resolve(relPath);
     await fs.mkdir(path.dirname(abs), { recursive: true });
     await fs.writeFile(abs, data);
+  }
+
+  async read(relPath: string) {
+    return fs.readFile(this.resolve(relPath));
   }
 
   async remove(relPath: string) {

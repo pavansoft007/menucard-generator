@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Op, type WhereOptions } from 'sequelize';
-import type { MediaUpdateInput } from '@gc/shared-types';
+import sharp from 'sharp';
+import type { MediaCropInput, MediaUpdateInput } from '@gc/shared-types';
 import {
   MediaAsset,
   MenuCategory,
@@ -75,6 +76,31 @@ export async function replaceFile(id: number, file: Express.Multer.File) {
   });
   await removeFiles(old);
   return media;
+}
+
+/**
+ * Crops (and optionally downsizes) an image into a NEW library image. It works from the untouched original with a
+ * lossless intermediate, so the source stays intact and repeated crops never accumulate compression damage.
+ */
+export async function cropMedia(id: number, c: MediaCropInput) {
+  const media = await getOrThrow(id);
+  if (media.kind === 'svg') throw HttpError.badRequest('Vector (SVG) images cannot be cropped here');
+  const source = await storage.read(media.originalPath);
+  const oriented = await sharp(source).rotate().raw().toBuffer({ resolveWithObject: true }); // EXIF-corrected pixels
+  const { width: W, height: H, channels } = oriented.info;
+  const left = Math.min(W - 1, Math.max(0, Math.round(c.x * W)));
+  const top = Math.min(H - 1, Math.max(0, Math.round(c.y * H)));
+  const width = Math.max(1, Math.min(W - left, Math.round(c.w * W)));
+  const height = Math.max(1, Math.min(H - top, Math.round(c.h * H)));
+
+  let pipeline = sharp(oriented.data, { raw: { width: W, height: H, channels } }).extract({ left, top, width, height });
+  if (c.outputWidth && c.outputWidth < width) pipeline = pipeline.resize({ width: c.outputWidth });
+  const ext = media.mime === 'image/png' ? 'png' : media.mime === 'image/webp' ? 'webp' : 'jpg';
+  const out = await (ext === 'png' ? pipeline.png() : ext === 'webp' ? pipeline.webp({ quality: 95 }) : pipeline.jpeg({ quality: 95, mozjpeg: true })).toBuffer();
+
+  const stem = media.originalName.replace(/\.[^.]+$/, '').slice(0, 200);
+  const file = { buffer: out, originalname: `${stem}-crop.${ext}`, size: out.length } as Express.Multer.File;
+  return createFromUpload(file, media.category);
 }
 
 export async function getOrThrow(id: number) {

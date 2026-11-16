@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { mediaUpdateSchema } from '@gc/shared-types';
+import { mediaCropSchema, mediaUpdateSchema } from '@gc/shared-types';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validateBody } from '../../middleware/validate.js';
@@ -106,6 +106,15 @@ mediaRouter.post(
     if (!req.file) throw HttpError.badRequest('No file received (field name must be "file")');
     const m = await service.replaceFile(idParam(req), req.file);
     res.json({ success: true, data: toMediaDTO(m) });
+  }),
+);
+
+mediaRouter.post(
+  '/:id/crop',
+  validateBody(mediaCropSchema),
+  asyncHandler(async (req, res) => {
+    const m = await service.cropMedia(idParam(req), req.body);
+    res.status(201).json({ success: true, data: toMediaDTO(m, 0) });
   }),
 );
 

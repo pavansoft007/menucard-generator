@@ -9,6 +9,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare passwordHash: string;
   declare role: CreationOptional<UserRole>;
   declare isActive: CreationOptional<boolean>;
+  declare tokenVersion: CreationOptional<number>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
   declare deletedAt: CreationOptional<Date | null>;
@@ -22,6 +23,7 @@ User.init(
     passwordHash: { type: DataTypes.STRING(120), allowNull: false },
     role: { type: DataTypes.ENUM('admin', 'editor'), allowNull: false, defaultValue: 'editor' },
     isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    tokenVersion: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
     deletedAt: DataTypes.DATE,

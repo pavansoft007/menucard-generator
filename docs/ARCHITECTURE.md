@@ -1,4 +1,6 @@
-# Golden Crunch Menu Builder – Architecture & Roadmap
+# Golden Crunch Menu Builder – Architecture notes
+
+> Written at the start of the project; updated at the end of Phase 6 to describe what was actually built. See the README for setup and operations.
 
 ## 1. Core idea
 A menu book is **data**: `Menu → Pages → Elements (JSON tree)`. Menu content (items, prices, images) lives in
@@ -29,13 +31,13 @@ uploads/          originals/, optimized/, thumbs/ (git-ignored, configurable roo
 - **Templates**: the 6 card templates are renderer components selected by `section.cardTemplate`.
 
 ## 4. PDF / PNG export
-Puppeteer (headless Chromium) opens `/render/menu/:id?page=n` (a chrome-free route using `<PageRenderer/>`),
+`puppeteer-core` drives the installed Chrome/Chromium (nothing is downloaded by the project). It opens `/render/:pageId?token=…` (a chrome-free route using `<PageRenderer/>`),
 `page.pdf({ width:'210mm', height:'297mm', printBackground:true, preferCSSPageSize:true })`.
 - Fonts are self-hosted (`@fontsource`) → embedded in PDF.
 - PNG: `deviceScaleFactor` = 300/96 ≈ 3.125 → true 300 DPI A4 (2480×3508).
-- Multi-page: one HTML doc, `page-break-after`; or merge per-page PDFs with `pdf-lib` for page ranges.
-- Spiral binding: `bindingMargin` mirrored on odd/even pages (inner edge). Bleed: optional 3 mm extension.
-- Render route authenticated via short-lived signed token.
+- Multi-page: one PDF per page (pages may have different sizes), merged with `pdf-lib`. Chrome floors the PDF page size to 1/300 inch (A4 → 209.89 × 297.01 mm), so each page is redrawn as vector content onto a page of the exact size.
+- Spiral binding: the binding strip is on the left of odd pages and the right of even pages. Element coordinates are page-relative, so it is enforced by guides, the layout generator's safe area and the export's print checks (not by silently shifting content). Bleed enlarges the sheet and sets TrimBox/BleedBox; it extends the page background colour.
+- The render route is authenticated with a 15-minute, **read-only** token (rejected for any non-GET request and for the export endpoints); Chrome may only request the app's own origin.
 
 ## 5. Image storage
 Multer → validate (magic-byte sniff, not just extension, size cap) → random UUID filename → keep **original**
@@ -54,15 +56,20 @@ All with PK, FKs (`RESTRICT` on category→items and media→usage), indexes, ti
 JWT (httpOnly-capable, bearer for API), bcrypt, RBAC (admin/editor), helmet, express-rate-limit, CORS allow-list,
 zod validation on every route, upload validation, env via `.env` + zod-checked config.
 
-## 8. Roadmap (matches your phases; each ends with tsc + eslint + API/DB tests + browser check)
-1. Monorepo, API skeleton, Sequelize + migrations, auth, admin shell (layout, theme toggle, routing).
-2. Restaurant settings, media library + sharp pipeline, logos, categories, items + variants, **seed data**.
-3. Backgrounds, themes, combos, sections, pages (JSON layouts), versions/publish.
-4. Editor (canvas, panels, undo/redo, autosave), card templates, live preview.
-5. Puppeteer PDF/PNG export, binding margin, bleed, export settings panel.
-6. Tests (vitest/supertest/playwright smoke), security review, perf, README + deployment docs.
+## 8. Delivery (all six phases complete)
+1. Monorepo, API skeleton, Sequelize + migrations, auth, admin shell.
+2. Restaurant settings, media library + sharp pipeline, logos, categories, items + variants, seed data, dashboard stats.
+3. Backgrounds, themes, combos, sections, pages (JSON layouts), versions / publish.
+4. Visual editor, shared renderer, six card templates, live preview, autosave and print checks.
+5. PDF / PNG export, bleed, page ranges, duplex options, export history.
+6. Security hardening (database-checked sessions, roles, rate limits, production guards), users and settings, image crop,
+   code-splitting, production build, Docker, smoke test, documentation.
 
-## 9. Decisions to confirm
-- DB: use XAMPP's MariaDB at `D:\pro\xampp` (detected) – compatible with Sequelize `mysql2`.
-- Food images: you upload them; seed ships **no** images (no stock/hardcoded photos) and no invented prices
-  (Water Bottle price left null/"configurable").
+## 9. Decisions that differ from the first proposal
+- **Database:** MySQL 8 in Docker on host port **3307** (the machine's 3306 belongs to another project), not XAMPP's MariaDB.
+- **Export engine:** `puppeteer-core` + the installed browser instead of `puppeteer` (whose browser download is an install script).
+- **Editor canvas:** a small purpose-built drag/resize/rotate/snap layer instead of `react-moveable`; `dnd-kit` is used for list ordering.
+- **Soft vs hard delete:** categories, items and themes are soft-deleted; logos, backgrounds and combos are hard-deleted because a
+  soft-deleted row would keep a `RESTRICT` foreign key on its image and silently lock it.
+- **Image crop is non-destructive:** it always creates a new image from the untouched original.
+- Food images are uploaded by the user; the seed ships no images and no invented prices.

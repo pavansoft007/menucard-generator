@@ -8,6 +8,7 @@ export {
   MenuItemMedia,
   MenuItemVariant,
 } from './menu.js';
+export { MenuExport } from './export.js';
 export {
   MenuTheme,
   MenuBackground,

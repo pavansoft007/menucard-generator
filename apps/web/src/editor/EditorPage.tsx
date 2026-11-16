@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Chip, CircularProgress, Divider, IconButton, Slider, Switch, Tooltip, Typography, FormControlLabel } from '@mui/material';
@@ -48,6 +48,7 @@ export default function EditorPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirm, setConfirm] = useState<null | 'generate' | 'clear'>(null);
   const [editSection, setEditSection] = useState<number | null>(null);
+  const fitPending = useRef(false); // a freshly generated layout is fitted to its real content once it has been measured
 
   const page = data.pages.find((p) => p.id === id);
   const active = data.pages.filter((p) => p.isActive);
@@ -66,11 +67,21 @@ export default function EditorPage() {
       const elements = fresh ? generateLayout(page, page.sections ?? [], data, pageNumber) : page.layout.elements;
       useEditor.getState().load(page, elements);
       if (fresh && elements.length) useEditor.setState({ rev: 1, status: 'dirty' }); // persist the generated layout
+      fitPending.current = fresh;
       const d = readDraft(id);
       setDraft(d && d.savedAt > Date.parse(page.updatedAt) && JSON.stringify(d.elements) !== JSON.stringify(elements) ? d : null);
     })();
     return () => { cancelled = true; };
   }, [page, isLoading, id, store.pageId, data, pageNumber, flush]);
+
+  useEffect(() => {
+    if (!fitPending.current || !loaded) return;
+    const secs = store.elements.filter((e) => e.type === 'section');
+    if (secs.length && secs.every((e) => store.measured[e.id] !== undefined)) {
+      fitPending.current = false;
+      fitAndStack(true);
+    }
+  }, [loaded, store.measured, store.elements]);
 
   const size = loaded ? resolvePageSize(store.settings) : { widthMm: 210, heightMm: 297 };
   const issues = useMemo(() => (loaded ? layoutIssues(store.elements, store.settings, pageNumber, store.measured) : []), [loaded, store.elements, store.settings, pageNumber, store.measured]);
@@ -174,18 +185,23 @@ export default function EditorPage() {
     st.replaceElements(generateLayout({ title: st.meta.title, subtitle: st.meta.subtitle, pageType: st.meta.pageType, settings: st.settings }, sections, data, pageNumber));
     st.select([]);
   };
-  const stack = () => {
+  /** Sizes every section box to its real content height and stacks them top-to-bottom with an even gap. */
+  const fitAndStack = (quiet = false) => {
     const st = useEditor.getState();
     const secs = st.elements.filter((e) => e.type === 'section').sort((a, b) => a.y - b.y || a.x - b.x);
-    if (secs.length < 2) return notify('Nothing to stack – the page has fewer than two sections', 'info');
+    if (secs.length === 0 || secs.some((e) => st.measured[e.id] === undefined)) return false;
+    if (secs.length < 2 && quiet) return false;
     let y = secs[0]!.y;
-    const place = new Map<string, number>();
+    const place = new Map<string, { y: number; h: number }>();
     for (const e of secs) {
-      place.set(e.id, round1(y));
-      y += Math.max(e.h, st.measured[e.id] ?? 0) + 4;
+      const h = Math.ceil(st.measured[e.id]! * 10) / 10;
+      place.set(e.id, { y: round1(y), h });
+      y += h + 4;
     }
-    st.patch(secs.map((e) => e.id), (e) => ({ y: place.get(e.id)!, h: Math.max(e.h, st.measured[e.id] ?? 0) }));
+    st.patch(secs.map((e) => e.id), (e) => place.get(e.id)!);
+    return true;
   };
+  const stack = () => { if (!fitAndStack()) notify('Waiting for the sections to finish rendering – try again in a moment', 'info'); };
 
   /* -------------------------------------------------------------- keyboard */
   useEffect(() => {

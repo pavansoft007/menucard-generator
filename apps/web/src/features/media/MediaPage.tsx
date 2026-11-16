@@ -21,6 +21,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import type { MediaDTO } from '@gc/shared-types';
 import { keys, mediaService, type MediaUsage } from '../../services/menuService';
 import { useUiStore } from '../../store/uiStore';
+import CropDialog from './CropDialog';
 import { checker, ConfirmDialog, Dropzone, ErrorAlert, formatBytes, ListSkeleton, PageHeader } from '../../components/common';
 import EmptyState from '../../components/EmptyState';
 
@@ -38,7 +39,7 @@ function UsageText({ u }: { u?: MediaUsage }) {
   return <Typography variant="body2">Used by {parts.join(', ')}.</Typography>;
 }
 
-function MediaDialog({ media, categories, onClose }: { media: MediaDTO; categories: string[]; onClose: () => void }) {
+function MediaDialog({ media, categories, onClose, onSwitch }: { media: MediaDTO; categories: string[]; onClose: () => void; onSwitch: (m: MediaDTO) => void }) {
   const qc = useQueryClient();
   const notify = useUiStore((s) => s.notify);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -46,6 +47,7 @@ function MediaDialog({ media, categories, onClose }: { media: MediaDTO; categori
   const [category, setCategory] = useState(media.category ?? '');
   const [alt, setAlt] = useState(media.altText ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [cropping, setCropping] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const usage = useQuery({ queryKey: [...keys.media, 'usage', media.id, current.url], queryFn: () => mediaService.usage(media.id) });
 
@@ -104,6 +106,7 @@ function MediaDialog({ media, categories, onClose }: { media: MediaDTO; categori
             <Button variant="contained" onClick={() => save.mutate()} disabled={save.isPending}>
               Save details
             </Button>
+            <Button onClick={() => setCropping(true)} disabled={current.kind === 'svg' || !current.width}>Crop &amp; resize…</Button>
             <Button onClick={() => fileInput.current?.click()} disabled={replace.isPending}>
               {replace.isPending ? 'Replacing…' : 'Replace file'}
             </Button>
@@ -123,6 +126,7 @@ function MediaDialog({ media, categories, onClose }: { media: MediaDTO; categori
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
+      {cropping && <CropDialog media={current} onClose={() => setCropping(false)} onCreated={(m) => { setCropping(false); onSwitch(m); }} />}
       <ConfirmDialog
         open={confirmDelete}
         title="Delete image permanently?"
@@ -230,7 +234,7 @@ export default function MediaPage() {
           </div>
         </>
       )}
-      {selected && <MediaDialog key={selected.id} media={selected} categories={cats.data ?? []} onClose={() => setSelected(null)} />}
+      {selected && <MediaDialog key={selected.id} media={selected} categories={cats.data ?? []} onClose={() => setSelected(null)} onSwitch={setSelected} />}
     </>
   );
 }
